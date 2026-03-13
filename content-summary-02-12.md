@@ -1,4 +1,4 @@
-# Content Summary: Chapters 02–05
+# Content Summary: Chapters 02–12
 
 ## Chapter 02 — Basics
 
@@ -112,3 +112,112 @@ Reference links to Pydantic's types and network-types documentation.
 
 ### 05.07–05.08 - Project & Solution
 Adds a `UUID4` field (with alias `"id"` and default `None`) to the `Automobile` model, demonstrating specialized-type integration.
+
+---
+
+## Chapter 06 — Additional Field Features
+
+### 06.02 - Numerical Constraints
+`Field()` parameters for numeric validation: `gt`, `ge`, `lt`, `le`, and `multiple_of`. `PositiveInt` is equivalent to `Field(gt=0)`. Multiple constraints can be combined on a single field.
+
+### 06.03 - String Constraints
+Length constraints (`min_length`, `max_length`) apply to both strings and sequences. `pattern` enables regex validation. Works with variadic tuples (`tuple[int, ...]`) for length checking.
+
+### 06.04 - Default Factories
+`default_factory` parameter ensures fresh default values per instance. Use `lambda` functions for dynamic defaults (e.g., `datetime.now()`). Pydantic automatically handles mutable defaults safely, but `default_factory` is explicit.
+
+### 06.05 - Additional Field Configurations
+Per-field overrides for model-level config: `strict` (lax/strict coercion), `validate_default`, `frozen` (immutable field), and `exclude` (omit from serialization). Field-level config takes precedence over model-level config.
+
+### 06.06–06.07 - Project & Solution
+Practical exercise applying field constraints and configuration overrides.
+
+---
+
+## Chapter 07 — Annotated Types
+
+### 07.02 - Pydantic and Annotated Types
+Using `Annotated` to attach `Field` metadata to types for reuse. Eliminates duplication when the same constraints appear across multiple fields or models.
+
+### 07.03 - Annotated Types and Type Variables
+`TypeVar` enables generic annotated types. Create reusable constrained collections (e.g., `BoundedList[int]`, `BoundedList[str]`) with a single type definition.
+
+### 07.04 - String Constraints with StringConstraints
+`StringConstraints` provides advanced string validation: `to_lower`, `to_upper`, `strip_whitespace`, `min_length`, `max_length`, and `pattern`. More powerful than `Field` for string-specific transformations combined with validation.
+
+### 07.05–07.06 - Project & Solution
+Practical exercise applying annotated types and string constraints.
+
+---
+
+## Chapter 08 — Custom Validators
+
+### 08.02 - After Validators
+Default validator mode — runs after Pydantic's built-in validation. Receives already-coerced, validated values. Raise `ValueError` for validation failures (Pydantic converts to `ValidationError`). Can transform values. Apply to multiple fields or all fields with `"*"`.
+
+### 08.03 - Before Validators
+Runs before Pydantic validation (`mode="before"`). Receives raw input data of any type. Used for custom deserialization or preprocessing. Multiple before validators execute bottom-to-top.
+
+### 08.04 - Combining Before and After Validators
+Execution order: before (bottom → top) → Pydantic built-in → after (top → bottom). Powerful for preprocessing raw data then post-processing validated values.
+
+### 08.05 - Custom Validators Using Annotations
+Define validators as standalone functions attached via `BeforeValidator()` and `AfterValidator()` in `Annotated`. Promotes reusability across models without class methods. Multiple validators in a single annotation.
+
+### 08.06 - Dependent Field Validations
+Access previously validated fields via `ValidationInfo.data`. Only fields defined before the current field are available. Always check if the dependent field exists in `data` before using it.
+
+### 08.07–08.08 - Project & Solution
+Practical exercise combining before/after validators with dependent field validation.
+
+---
+
+## Chapter 09 — Properties and Computed Fields
+
+### 09.02 - Properties
+Standard Python `@property` works on Pydantic models. Properties are not model fields — they are not serialized, not in `model_dump()`, and not in repr. `@cached_property` available for expensive computations (freeze relevant fields to avoid stale caches).
+
+### 09.03 - Computed Fields
+`@computed_field` makes properties behave like model fields — serialized in `model_dump()` and `model_dump_json()`. Return type annotation is required. Supports aliases and `repr=False`. Can combine with `@cached_property` for efficiency.
+
+### 09.04–09.05 - Project & Solution
+Practical exercise implementing properties and computed fields.
+
+---
+
+## Chapter 10 — Custom Serializers using Annotated Types
+
+### 10.02 - Custom Serializers
+`PlainSerializer` replaces Pydantic's default serialization for a type. Attach to `Annotated` types alongside validators for a complete reusable type (validation + serialization in one definition). `when_used` parameter controls when custom serialization applies: `"always"`, `"json"`, `"json-unless-none"`, `"unless-none"`.
+
+### 10.03–10.04 - Project & Solution
+Practical exercise building a complete annotated type with `BeforeValidator`, `AfterValidator`, and `PlainSerializer`.
+
+---
+
+## Chapter 11 — Complex Models
+
+### 11.02 - Model Composition
+Nest Pydantic models as fields in other models. Each sub-model independently configured (e.g., `extra="ignore"` to filter unwanted nested data). Automatic nested serialization and deserialization.
+
+### 11.03 - Model Inheritance
+Create a custom base model with shared `ConfigDict` and fields. All child models inherit configuration. Useful for standardizing behavior across an application (e.g., alias generators, extra-field handling). Avoid multiple inheritance in Pydantic v2. Enables response wrapper patterns with common metadata (request ID, timestamps).
+
+### 11.04–11.06 - Project & Solution
+Practical exercise building complex nested models with shared base configuration.
+
+---
+
+## Chapter 12 — Applications
+
+### 12.02 - Consuming a REST API
+Create Pydantic models matching API response schemas. Use `model_validate()` with `response.json()`. Set `extra="ignore"` to handle unexpected fields. Custom validators clean up inconsistent values (e.g., converting `"Unknown"` to `None`).
+
+### 12.03 - Ingesting a CSV File
+CSV data is all strings — use `BeforeValidator` for custom type parsing (e.g., stripping commas from numbers). `csv.DictReader` maps columns to field names. Generator functions (`yield`) for memory-efficient row-by-row processing.
+
+### 12.04 - Validating Function Arguments
+`@validate_call` decorator applies Pydantic validation to function arguments. Works with `Annotated` types for argument constraints. Raises `ValidationError` before the function executes. Type coercion applies to arguments.
+
+### 12.05 - Model Code Generators
+`datamodel-code-generator` CLI tool auto-generates Pydantic models from JSON Schema, OpenAPI, JSON data, and CSV files. Works well for simple/moderate schemas but cannot capture complex conditional logic (e.g., if-else schema rules). Generated models often need manual refinement — use as a starting point. CSV generation produces all-string fields; manual validators still needed for type conversion.
