@@ -1,7 +1,8 @@
-# Pydantic Essentials Cheat Sheet (Sections 02–12)
+# Pydantic Essentials Cheat Sheet (Chapters 02–12)
 
-## Model Basics
+## Chapter 02 — Basics
 
+### 02.02 Creating a Model
 ```python
 from pydantic import BaseModel
 
@@ -11,14 +12,14 @@ class User(BaseModel):
     email: str | None = None  # optional + nullable
 ```
 
-### Deserialization
+### 02.03 Deserialization
 ```python
 u = User(name="Alice", age=30)              # constructor
 u = User.model_validate({"name": "Alice", "age": 30})  # from dict
 u = User.model_validate_json('{"name":"Alice","age":30}')  # from JSON
 ```
 
-### Serialization
+### 02.04 Serialization
 ```python
 u.model_dump()                        # → dict
 u.model_dump_json()                   # → JSON string
@@ -27,7 +28,7 @@ u.model_dump(exclude={"email"})       # exclude fields
 u.model_dump(by_alias=True)           # use aliases as keys
 ```
 
-### Field Kinds
+### 02.06–02.08 Field Kinds
 ```python
 name: str                  # required, non-nullable
 name: str | None           # required, nullable
@@ -35,60 +36,68 @@ name: str = "default"      # optional, non-nullable
 name: str | None = None    # optional, nullable
 ```
 
-### Inspection
+### 02.09 Inspection
 ```python
 User.model_fields              # schema-level field info
 u.model_fields_set             # fields caller actually provided
-User.model_json_schema()       # JSON Schema dict
+User.model_json_schema()       # JSON Schema dict (02.10)
 ```
 
 ---
 
-## Model Configuration
+## Chapter 03 — Model Configuration
 
+### 03.02–03.09 ConfigDict Options
 ```python
 from pydantic import ConfigDict
 
 class MyModel(BaseModel):
     model_config = ConfigDict(
-        extra="forbid",              # "ignore" | "forbid" | "allow"
-        strict=True,                 # disable lax type coercion
-        frozen=True,                 # immutable + hashable
-        validate_default=True,       # validate default values
-        validate_assignment=True,    # validate on attribute set
-        coerce_numbers_to_str=True,  # 123 → "123"
-        str_strip_whitespace=True,   # strip leading/trailing spaces
-        str_to_lower=True,           # normalize to lowercase
-        use_enum_values=True,        # store raw value, not Enum member
+        extra="forbid",              # 03.02: "ignore" | "forbid" | "allow"
+        strict=True,                 # 03.03: disable lax type coercion
+        validate_default=True,       # 03.04: validate default values
+        validate_assignment=True,    # 03.05: validate on attribute set
+        frozen=True,                 # 03.06: immutable + hashable
+        coerce_numbers_to_str=True,  # 03.07: 123 → "123"
+        str_strip_whitespace=True,   # 03.08: strip leading/trailing spaces
+        str_to_lower=True,           # 03.08: normalize to lowercase
+        use_enum_values=True,        # 03.09: store raw value, not Enum member
         populate_by_name=True,       # accept field name OR alias
     )
 ```
 
 ---
 
-## Field Aliases
+## Chapter 04 — Field Aliasing, Serialization and Deserialization
 
+### 04.02–04.03 Field Aliases
 ```python
 from pydantic import Field
 from pydantic.alias_generators import to_camel
 
 class Order(BaseModel):
-    model_config = ConfigDict(alias_generator=to_camel)
+    model_config = ConfigDict(alias_generator=to_camel)  # 04.03
 
     order_id: int                                          # alias → "orderId"
-    status: str = Field(alias="order_status")              # manual alias
-    code: str = Field(validation_alias="source_code")      # deserialization only
-    label: str = Field(serialization_alias="display_label")# serialization only
+    status: str = Field(alias="order_status")              # 04.02: manual alias
+    code: str = Field(validation_alias="source_code")      # 04.06: deserialization only
+    label: str = Field(serialization_alias="display_label")# 04.05: serialization only
 ```
 
-### AliasChoices (accept multiple names)
+### 04.04 Deserializing by Field Name or Alias
+```python
+model_config = ConfigDict(populate_by_name=True)
+# Now accepts both field name and alias during deserialization
+```
+
+### 04.06 AliasChoices (accept multiple names)
 ```python
 from pydantic import AliasChoices
 
 name: str = Field(validation_alias=AliasChoices("name", "full_name", "userName"))
 ```
 
-### Custom Serializer
+### 04.07 Custom Serializer
 ```python
 from pydantic import field_serializer
 from datetime import datetime
@@ -106,15 +115,17 @@ class Event(BaseModel):
 
 ---
 
-## Specialized Types
+## Chapter 05 — Specialized Pydantic Types
 
+### 05.02–05.06 Type Reference
 ```python
-from pydantic import PositiveInt, NegativeInt, NonNegativeInt
-from pydantic import conlist
-from pydantic import UUID4, Field
-from pydantic import PastDate, PastDatetime, NaiveDatetime, AwareDatetime
-from pydantic import AnyUrl, HttpUrl, IPvAnyAddress
-from pydantic import EmailStr, NameEmail  # requires email-validator
+from pydantic import PositiveInt, NegativeInt, NonNegativeInt  # 05.02
+from pydantic import conlist                                    # 05.03
+from pydantic import UUID4, Field                               # 05.04
+from pydantic import PastDate, PastDatetime                     # 05.05
+from pydantic import NaiveDatetime, AwareDatetime               # 05.05
+from pydantic import AnyUrl, HttpUrl, IPvAnyAddress             # 05.06
+from pydantic import EmailStr, NameEmail                        # 05.06 (requires email-validator)
 from uuid import uuid4
 
 class Item(BaseModel):
@@ -128,25 +139,25 @@ class Item(BaseModel):
     ip: IPvAnyAddress
 ```
 
-| Type | Constraint |
-|------|-----------|
-| `PositiveInt` | `> 0` |
-| `NegativeInt` | `< 0` |
-| `NonNegativeInt` | `>= 0` |
-| `conlist(T, min_length, max_length)` | list length bounds |
-| `UUID4` | valid UUID v4 |
-| `PastDate` / `PastDatetime` | must be in the past |
-| `NaiveDatetime` | no timezone |
-| `AwareDatetime` | requires timezone |
-| `HttpUrl` | valid HTTP(S) URL |
-| `EmailStr` | valid email |
-| `IPvAnyAddress` | IPv4 or IPv6 |
+| Type | Section | Constraint |
+|------|---------|-----------|
+| `PositiveInt` | 05.02 | `> 0` |
+| `NegativeInt` | 05.02 | `< 0` |
+| `NonNegativeInt` | 05.02 | `>= 0` |
+| `conlist(T, min_length, max_length)` | 05.03 | list length bounds |
+| `UUID4` | 05.04 | valid UUID v4 |
+| `PastDate` / `PastDatetime` | 05.05 | must be in the past |
+| `NaiveDatetime` | 05.05 | no timezone |
+| `AwareDatetime` | 05.05 | requires timezone |
+| `HttpUrl` | 05.06 | valid HTTP(S) URL |
+| `EmailStr` | 05.06 | valid email |
+| `IPvAnyAddress` | 05.06 | IPv4 or IPv6 |
 
 ---
 
-## Additional Field Features
+## Chapter 06 — Additional Field Features
 
-### Numerical Constraints
+### 06.02 Numerical Constraints
 ```python
 from pydantic import Field
 
@@ -154,7 +165,7 @@ number: float = Field(gt=0, le=100)           # 0 < x <= 100
 step: int = Field(ge=0, lt=50, multiple_of=5) # 0 <= x < 50, multiples of 5
 ```
 
-### String & Sequence Constraints
+### 06.03 String & Sequence Constraints
 ```python
 name: str = Field(min_length=1, max_length=50)
 zip_code: str = Field(pattern=r"^[0-9]{5}(?:-[0-9]{4})?$")
@@ -162,7 +173,7 @@ items: list[float] = Field(min_length=1, max_length=10)
 coords: tuple[int, ...] = Field(min_length=2, max_length=3)
 ```
 
-### Default Factories
+### 06.04 Default Factories
 ```python
 from datetime import datetime, UTC
 
@@ -170,7 +181,7 @@ dt: datetime = Field(default_factory=lambda: datetime.now(UTC))
 tags: list[str] = Field(default_factory=list)
 ```
 
-### Per-Field Config Overrides
+### 06.05 Per-Field Config Overrides
 ```python
 class Model(BaseModel):
     model_config = ConfigDict(strict=False)
@@ -183,9 +194,9 @@ class Model(BaseModel):
 
 ---
 
-## Annotated Types
+## Chapter 07 — Annotated Types
 
-### Reusable Constrained Types
+### 07.02 Reusable Constrained Types
 ```python
 from typing import Annotated
 
@@ -197,7 +208,7 @@ class Model(BaseModel):
     name: ShortStr
 ```
 
-### Generic Constraints with TypeVar
+### 07.03 Generic Constraints with TypeVar
 ```python
 from typing import TypeVar
 T = TypeVar("T")
@@ -208,7 +219,7 @@ class Model(BaseModel):
     strs: BoundedList[str] = []
 ```
 
-### StringConstraints
+### 07.04 StringConstraints
 ```python
 from pydantic import StringConstraints
 
@@ -219,9 +230,9 @@ CleanStr = Annotated[str, StringConstraints(
 
 ---
 
-## Custom Validators
+## Chapter 08 — Custom Validators
 
-### After Validator (default — runs after Pydantic validation)
+### 08.02 After Validator (default — runs after Pydantic validation)
 ```python
 from pydantic import field_validator
 
@@ -246,7 +257,7 @@ class Model(BaseModel):
         return round(v, 2)
 ```
 
-### Before Validator (runs before Pydantic validation)
+### 08.03 Before Validator (runs before Pydantic validation)
 ```python
 class Model(BaseModel):
     dt: datetime
@@ -259,7 +270,7 @@ class Model(BaseModel):
         return value
 ```
 
-### Validators via Annotated Types (reusable)
+### 08.05 Validators via Annotated Types (reusable)
 ```python
 from pydantic import BeforeValidator, AfterValidator
 
@@ -278,9 +289,9 @@ def make_utc(dt: datetime) -> datetime:
 DateTimeUTC = Annotated[datetime, BeforeValidator(parse_datetime), AfterValidator(make_utc)]
 ```
 
-Execution order: **before** (bottom → top) → **Pydantic** → **after** (top → bottom)
+Execution order (08.04): **before** (bottom → top) → **Pydantic** → **after** (top → bottom)
 
-### Dependent Field Validation
+### 08.06 Dependent Field Validation
 ```python
 from pydantic import ValidationInfo
 
@@ -298,9 +309,9 @@ class Model(BaseModel):
 
 ---
 
-## Properties & Computed Fields
+## Chapter 09 — Properties and Computed Fields
 
-### Properties (not serialized)
+### 09.02 Properties (not serialized)
 ```python
 class Circle(BaseModel):
     radius: float = Field(gt=0)
@@ -310,7 +321,7 @@ class Circle(BaseModel):
         return 3.14159 * self.radius ** 2
 ```
 
-### Computed Fields (serialized like regular fields)
+### 09.03 Computed Fields (serialized like regular fields)
 ```python
 from pydantic import computed_field
 from functools import cached_property
@@ -330,8 +341,9 @@ c.model_dump(by_alias=True) # {'radius': 5.0, 'AREA': 78.5...}
 
 ---
 
-## Custom Serializers via Annotated Types
+## Chapter 10 — Custom Serializers using Annotated Types
 
+### 10.02 PlainSerializer in Annotated Types
 ```python
 from pydantic import PlainSerializer
 
@@ -351,9 +363,9 @@ DateTimeUTC = Annotated[
 
 ---
 
-## Complex Models
+## Chapter 11 — Complex Models
 
-### Composition (nested models)
+### 11.02 Model Composition (nested models)
 ```python
 class Address(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -368,7 +380,7 @@ data = {"name": "Alice", "address": {"city": "Paris", "country": "FR", "zip": "7
 p = Person.model_validate(data)  # zip silently ignored
 ```
 
-### Inheritance (shared config base)
+### 11.03 Model Inheritance (shared config base)
 ```python
 from pydantic.alias_generators import to_camel
 
@@ -386,7 +398,7 @@ class Order(AppBaseModel):
     order_id: int       # alias → "orderId"
 ```
 
-### Response Wrapper Pattern
+### 11.03 Response Wrapper Pattern
 ```python
 class RequestInfo(AppBaseModel):
     query_id: UUID4 = Field(default_factory=uuid4)
@@ -401,9 +413,9 @@ class UsersResponse(ResponseBase):
 
 ---
 
-## Applications
+## Chapter 12 — Applications
 
-### Consuming a REST API
+### 12.02 Consuming a REST API
 ```python
 import requests
 
@@ -420,7 +432,7 @@ class IPGeo(BaseModel):
 geo = IPGeo.model_validate(requests.get("https://api.example.com/geo/8.8.8.8").json())
 ```
 
-### Ingesting CSV Data
+### 12.03 Ingesting CSV Data
 ```python
 import csv
 
@@ -438,7 +450,7 @@ def load_csv(path):
             yield Row.model_validate(row)
 ```
 
-### Validating Function Arguments
+### 12.04 Validating Function Arguments
 ```python
 from pydantic import validate_call
 
